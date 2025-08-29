@@ -783,4 +783,16 @@ var _ = Describe("test configuration", func() {
 		Entry("reference when InstancetypeConfiguration.ReferencePolicy is reference", &v1.InstancetypeConfiguration{ReferencePolicy: pointer.P(v1.Reference)}, v1.Reference),
 		Entry("expand InstancetypeConfiguration.ReferencePolicy is expand", &v1.InstancetypeConfiguration{ReferencePolicy: pointer.P(v1.Expand)}, v1.Expand),
 	)
+
+	DescribeTable(" when virtiofsd cache policy", func(value *v1.VirtioFSCachingPolicy, expected v1.VirtioFSCachingPolicy) {
+		clusterConfig, _, _ := testutils.NewFakeClusterConfigUsingKVConfig(&v1.KubeVirtConfiguration{
+			VirtioFSConfiguration: &v1.VirtioFSConfiguration{
+				CachingPolicy: value,
+			},
+		})
+		Expect(clusterConfig.GetVirioFSCachingPolicy()).To(Equal(expected))
+	},
+		Entry("is set, GetVirioFSCachingPolicy should return the set value", pointer.P(v1.VirtioFSCachingPolicyNever), v1.VirtioFSCachingPolicyNever),
+		Entry("is unset, GetVirioFSCachingPolicy should return the default", nil, virtconfig.DefaultVirtioFSCachingPolicy),
+	)
 })

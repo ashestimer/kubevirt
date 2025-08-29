@@ -272,6 +272,9 @@ func defaultClusterConfig(cpuArch string) *v1.KubeVirtConfiguration {
 			MaxHotplugRatio: DefaultMaxHotplugRatio,
 		},
 		VMRolloutStrategy: pointer.P(DefaultVMRolloutStrategy),
+		VirtioFSConfiguration: &v1.VirtioFSConfiguration{
+			CachingPolicy: pointer.P(DefaultVirtioFSCachingPolicy),
+		},
 	}
 }
 

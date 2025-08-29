@@ -896,6 +896,7 @@ func (KubeVirtConfiguration) SwaggerDoc() map[string]string {
 		"vmRolloutStrategy":                  "VMRolloutStrategy defines how live-updatable fields, like CPU sockets, memory,\ntolerations, and affinity, are propagated from a VM to its VMI.\n+nullable\n+kubebuilder:validation:Enum=Stage;LiveUpdate",
 		"commonInstancetypesDeployment":      "CommonInstancetypesDeployment controls the deployment of common-instancetypes resources\n+nullable",
 		"instancetype":                       "Instancetype configuration\n+nullable",
+		"virtioFsConfiguration":              "VirtioFSConfiguration defines option for virtiofsd daemon\n+nullable",
 	}
 }
 
@@ -1209,5 +1210,12 @@ func (ObjectGraphOptions) SwaggerDoc() map[string]string {
 		"":                     "ObjectGraphOptions holds options for the object graph.",
 		"includeOptionalNodes": "IncludeOptionalNodes indicates whether to include optional nodes in the graph.\nTrue by default.",
 		"labelSelector":        "LabelSelector is used to filter nodes in the graph based on their labels.",
+	}
+}
+
+func (VirtioFSConfiguration) SwaggerDoc() map[string]string {
+	return map[string]string{
+		"":              "VirtioFSConfiguration holds configuration options for virtiofd daemon in virtiofs container",
+		"cachingPolicy": "CachingPolicy is --cache option for virtiofsd\n+nullable\n+kubebuilder:validation:Enum=auto;always;metadata;never",
 	}
 }

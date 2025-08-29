@@ -230,6 +230,8 @@ spec:
       ciphers:
       - ciphersValue
       minTLSVersion: minTLSVersionValue
+    virtioFsConfiguration:
+      cachingPolicy: cachingPolicyValue
     virtualMachineInstancesPerNode: -30
     virtualMachineOptions:
       disableFreePageReporting: {}

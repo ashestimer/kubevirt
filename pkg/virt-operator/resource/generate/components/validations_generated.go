@@ -1562,6 +1562,20 @@ var CRDsValidation map[string]string = map[string]string{
                   - VersionTLS13
                   type: string
               type: object
+            virtioFsConfiguration:
+              description: VirtioFSConfiguration defines option for virtiofsd daemon
+              nullable: true
+              properties:
+                cachingPolicy:
+                  description: CachingPolicy is --cache option for virtiofsd
+                  enum:
+                  - auto
+                  - always
+                  - metadata
+                  - never
+                  nullable: true
+                  type: string
+              type: object
             virtualMachineInstancesPerNode:
               type: integer
             virtualMachineOptions:

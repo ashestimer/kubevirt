@@ -14960,6 +14960,10 @@
      "tlsConfiguration": {
       "$ref": "#/definitions/v1.TLSConfiguration"
      },
+     "virtioFsConfiguration": {
+      "description": "VirtioFSConfiguration defines option for virtiofsd daemon",
+      "$ref": "#/definitions/v1.VirtioFSConfiguration"
+     },
      "virtualMachineInstancesPerNode": {
       "type": "integer",
       "format": "int32"
@@ -16763,6 +16767,16 @@
     "properties": {
      "type": {
       "description": "Type specifies the video device type (e.g., virtio, vga, bochs, ramfb). If not specified, the default is architecture-dependent (VGA for BIOS-based VMs, Bochs for EFI-based VMs on AMD64; virtio for Arm and s390x).",
+      "type": "string"
+     }
+    }
+   },
+   "v1.VirtioFSConfiguration": {
+    "description": "VirtioFSConfiguration holds configuration options for virtiofd daemon in virtiofs container",
+    "type": "object",
+    "properties": {
+     "cachingPolicy": {
+      "description": "CachingPolicy is --cache option for virtiofsd",
       "type": "string"
      }
     }

@@ -88,8 +88,9 @@ const (
 	DefaultVirtWebhookClientQPS           = 200
 	DefaultVirtWebhookClientBurst         = 400
 
-	DefaultMaxHotplugRatio   = 4
-	DefaultVMRolloutStrategy = v1.VMRolloutStrategyLiveUpdate
+	DefaultMaxHotplugRatio       = 4
+	DefaultVMRolloutStrategy     = v1.VMRolloutStrategyLiveUpdate
+	DefaultVirtioFSCachingPolicy = v1.VirtioFSCachingPolicyAuto
 )
 
 func IsARM64(arch string) bool {
@@ -488,4 +489,12 @@ func (c *ClusterConfig) GetInstancetypeReferencePolicy() v1.InstancetypeReferenc
 func (c *ClusterConfig) ClusterProfilerEnabled() bool {
 	return c.GetConfig().DeveloperConfiguration.ClusterProfiler ||
 		c.isFeatureGateDefined(featuregate.ClusterProfiler)
+}
+
+func (c *ClusterConfig) GetVirioFSCachingPolicy() v1.VirtioFSCachingPolicy {
+	virioFSConfiguration := c.GetConfig().VirtioFSConfiguration
+	if virioFSConfiguration == nil || virioFSConfiguration.CachingPolicy == nil {
+		return DefaultVirtioFSCachingPolicy
+	}
+	return *virioFSConfiguration.CachingPolicy
 }

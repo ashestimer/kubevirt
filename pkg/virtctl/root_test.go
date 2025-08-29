@@ -77,6 +77,7 @@ var _ = Describe("virtctl", func() {
 		})
 
 		Expect(virtctl.Execute()).To(Equal(1))
+		fmt.Println(out.String())
 		Expect(out.String()).To(ContainSubstring(testError))
 		Expect(out.String()).To(ContainSubstring("You are using a client virtctl version that is different from the KubeVirt version running in the cluster"))
 	})

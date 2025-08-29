@@ -2920,6 +2920,10 @@ type KubeVirtConfiguration struct {
 	// Instancetype configuration
 	// +nullable
 	Instancetype *InstancetypeConfiguration `json:"instancetype,omitempty"`
+
+	// VirtioFSConfiguration defines option for virtiofsd daemon
+	// +nullable
+	VirtioFSConfiguration *VirtioFSConfiguration `json:"virtioFsConfiguration,omitempty"`
 }
 
 type InstancetypeConfiguration struct {
@@ -3585,3 +3589,20 @@ type ObjectGraphOptions struct {
 	// LabelSelector is used to filter nodes in the graph based on their labels.
 	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
 }
+
+// VirtioFSConfiguration holds configuration options for virtiofd daemon in virtiofs container
+type VirtioFSConfiguration struct {
+	// CachingPolicy is --cache option for virtiofsd
+	// +nullable
+	// +kubebuilder:validation:Enum=auto;always;metadata;never
+	CachingPolicy *VirtioFSCachingPolicy `json:"cachingPolicy,omitempty"`
+}
+type VirtioFSCachingPolicy string
+
+const (
+	// VirtioFSCachingPolicyAuto is the default caching policy for virtiofsd
+	VirtioFSCachingPolicyAuto     VirtioFSCachingPolicy = "auto"
+	VirtioFSCachingPolicyAlways   VirtioFSCachingPolicy = "always"
+	VirtioFSCachingPolicyMetadata VirtioFSCachingPolicy = "metadata"
+	VirtioFSCachingPolicyNever    VirtioFSCachingPolicy = "never"
+)

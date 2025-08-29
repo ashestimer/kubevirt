@@ -22,6 +22,8 @@ package virtiofs
 import (
 	"context"
 	"fmt"
+	"kubevirt.io/kubevirt/pkg/pointer"
+	kvconfig "kubevirt.io/kubevirt/tests/libkubevirt/config"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +36,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"kubevirt.io/client-go/kubecli"
+
+	corev1 "kubevirt.io/api/core/v1"
 	"kubevirt.io/kubevirt/tests/exec"
 	"kubevirt.io/kubevirt/tests/testsuite"
 
@@ -44,14 +49,18 @@ import (
 	"kubevirt.io/kubevirt/tests/decorators"
 	"kubevirt.io/kubevirt/tests/framework/checks"
 	"kubevirt.io/kubevirt/tests/libconfigmap"
+	"kubevirt.io/kubevirt/tests/libkubevirt"
 	"kubevirt.io/kubevirt/tests/libpod"
 	"kubevirt.io/kubevirt/tests/libsecret"
 	"kubevirt.io/kubevirt/tests/libvmifact"
 )
 
-var _ = Describe("[sig-compute] vitiofs config volumes", decorators.SigCompute, decorators.VirtioFS, func() {
+var _ = Describe("[sig-compute] vitiofs config volumes", Serial, decorators.SigCompute, func() {
+	var virtClient kubecli.KubevirtClient
+
 	BeforeEach(func() {
 		checks.SkipTestIfNoFeatureGate(featuregate.VirtIOFSConfigVolumesGate)
+		virtClient = kubevirt.Client()
 	})
 
 	Context("With a single ConfigMap volume", func() {
@@ -59,6 +68,10 @@ var _ = Describe("[sig-compute] vitiofs config volumes", decorators.SigCompute, 
 			configMapName string
 			configMapPath string
 		)
+
+		type configEntry struct {
+			cachePolicy *corev1.VirtioFSCachingPolicy
+		}
 
 		BeforeEach(func() {
 			// We use the ConfigMap name as mount `tag` for qemu, but the `tag` property must be 36 bytes or less
@@ -71,48 +84,60 @@ var _ = Describe("[sig-compute] vitiofs config volumes", decorators.SigCompute, 
 				"option3": "value3",
 			}
 			cm := libconfigmap.New(configMapName, data)
-			cm, err := kubevirt.Client().CoreV1().ConfigMaps(testsuite.GetTestNamespace(cm)).Create(context.Background(), cm, metav1.CreateOptions{})
+			cm, err := virtClient.CoreV1().ConfigMaps(testsuite.GetTestNamespace(cm)).Create(context.Background(), cm, metav1.CreateOptions{})
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("Should be the mounted virtiofs layout the same for a pod and vmi", func() {
-			expectedOutput := "value1value2value3"
+		DescribeTable("Should mount virtiofs layout the same for pod and vmi with different configs",
+			func(entry configEntry) {
+				By(fmt.Sprintf("Applying KubeVirt config with virtiofsd cache policy=%s", entry.cachePolicy))
+				kv := libkubevirt.GetCurrentKv(virtClient)
+				cfg := kv.Spec.Configuration
+				cfg.VirtioFSConfiguration = &corev1.VirtioFSConfiguration{
+					CachingPolicy: entry.cachePolicy,
+				}
+				kvconfig.UpdateKubeVirtConfigValueAndWait(cfg)
+				expectedOutput := "value1value2value3"
 
-			By("Running VMI")
-			vmi := libvmifact.NewFedora(
-				libvmi.WithConfigMapFs(configMapName, configMapName),
-			)
-			vmi = libvmops.RunVMIAndExpectLaunchIgnoreWarnings(vmi, 300)
+				By("Running VMI")
+				vmi := libvmifact.NewFedora(
+					libvmi.WithConfigMapFs(configMapName, configMapName),
+				)
+				vmi = libvmops.RunVMIAndExpectLaunchIgnoreWarnings(vmi, 300)
 
-			By("Logging into the VMI")
-			Expect(console.LoginToFedora(vmi)).To(Succeed())
+				By("Logging into the VMI")
+				Expect(console.LoginToFedora(vmi)).To(Succeed())
 
-			By("Checking if ConfigMap has been attached to the pod")
-			vmiPod, err := libpod.GetPodByVirtualMachineInstance(vmi, vmi.Namespace)
-			Expect(err).ToNot(HaveOccurred())
+				By("Checking if ConfigMap has been attached to the pod")
+				vmiPod, err := libpod.GetPodByVirtualMachineInstance(vmi, vmi.Namespace)
+				Expect(err).ToNot(HaveOccurred())
 
-			podOutput, err := exec.ExecuteCommandOnPod(
-				vmiPod,
-				fmt.Sprintf("virtiofs-%s", configMapName),
-				[]string{"cat",
-					configMapPath + "/option1",
-					configMapPath + "/option2",
-					configMapPath + "/option3",
-				},
-			)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(podOutput).To(Equal(expectedOutput))
+				podOutput, err := exec.ExecuteCommandOnPod(
+					vmiPod,
+					fmt.Sprintf("virtiofs-%s", configMapName),
+					[]string{"cat",
+						configMapPath + "/option1",
+						configMapPath + "/option2",
+						configMapPath + "/option3",
+					},
+				)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(podOutput).To(Equal(expectedOutput))
 
-			By("Checking mounted ConfigMap")
-			Expect(console.SafeExpectBatch(vmi, []expect.Batcher{
-				&expect.BSnd{S: fmt.Sprintf("mount -t virtiofs %s /mnt \n", configMapName)},
-				&expect.BExp{R: console.PromptExpression},
-				&expect.BSnd{S: "echo $?\n"},
-				&expect.BExp{R: console.RetValue("0")},
-				&expect.BSnd{S: "cat /mnt/option1 /mnt/option2 /mnt/option3\n"},
-				&expect.BExp{R: expectedOutput},
-			}, 200)).To(Succeed())
-		})
+				By("Checking mounted ConfigMap")
+				Expect(console.SafeExpectBatch(vmi, []expect.Batcher{
+					&expect.BSnd{S: fmt.Sprintf("mount -t virtiofs %s /mnt \n", configMapName)},
+					&expect.BExp{R: console.PromptExpression},
+					&expect.BSnd{S: "echo $?\n"},
+					&expect.BExp{R: console.RetValue("0")},
+					&expect.BSnd{S: "cat /mnt/option1 /mnt/option2 /mnt/option3\n"},
+					&expect.BExp{R: expectedOutput},
+				}, 200)).To(Succeed())
+			},
+			Entry("with CachePolicy never", configEntry{cachePolicy: pointer.P(corev1.VirtioFSCachingPolicyNever)}),
+			Entry("with CachePolicy auto", configEntry{cachePolicy: pointer.P(corev1.VirtioFSCachingPolicyAuto)}),
+			Entry("without CachePolicy", configEntry{}),
+		)
 	})
 
 	Context("With a single Secret volume", func() {
